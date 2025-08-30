@@ -24,11 +24,30 @@
   </style>
 </head>
 <body>
-  <h1 id="title">Cuisine — Bêtise 1 : renverser la plante</h1>
-  <canvas id="gameCanvas" width="480" height="320"></canvas>
+  <div id="startScreen">
+    <h1>Le Chat des 4 Bêtises</h1>
+    <button id="startButton">Miauler pour jouer</button>
+  </div>
+  <div id="gameScreen" style="display:none;">
+    <h1 id="title">Cuisine — Bêtise 1 : renverser la plante</h1>
+    <canvas id="gameCanvas" width="480" height="320"></canvas>
+  </div>
+  <div id="endScreen" style="display:none;">
+    <h1 id="endMessage"></h1>
+    <button id="restartButton">Rejouer</button>
+  </div>
   <script>
+    const startScreen = document.getElementById("startScreen");
+    const gameScreen = document.getElementById("gameScreen");
+    const endScreen = document.getElementById("endScreen");
+    const startButton = document.getElementById("startButton");
+    const restartButton = document.getElementById("restartButton");
+    const endMessageEl = document.getElementById("endMessage");
+
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
+
+    let state = "start";
 
     const chat = {
       x: 50,
@@ -57,7 +76,13 @@
       direction: 1
     };
 
-    let message = "";
+    function resetGame() {
+      chat.x = 50;
+      chat.y = 50;
+      papa.x = 200;
+      papa.direction = 1;
+      plante.renversee = false;
+    }
 
     function drawEntity(e) {
       ctx.fillStyle = e.color;
@@ -75,12 +100,6 @@
         ctx.font = "16px Courier";
         ctx.fillText("Plante renversée !", 140, 30);
       }
-
-      if (message) {
-        ctx.fillStyle = "red";
-        ctx.font = "18px Courier";
-        ctx.fillText(message, 100, 160);
-      }
     }
 
     function checkCollision(a, b) {
@@ -97,24 +116,27 @@
       papa.x += papa.direction * 2;
       if (papa.x <= 50 || papa.x >= 400) papa.direction *= -1;
 
-      // Si collision avec la plante
+      if (checkCollision(chat, papa)) {
+        endGame("gameover");
+        return;
+      }
+
       if (!plante.renversee && checkCollision(chat, plante)) {
-        if (!checkCollision(chat, papa)) {
-          plante.renversee = true;
-        } else {
-          message = "Attrapé par Papa !";
-        }
+        plante.renversee = true;
+        endGame("victory");
       }
     }
 
     function gameLoop() {
+      if (state !== "game") return;
       updateGame();
       drawScene();
-      if (!message) requestAnimationFrame(gameLoop);
+      if (state === "game") requestAnimationFrame(gameLoop);
     }
 
     document.addEventListener("keydown", (e) => {
-      if (message) return;
+      if (state !== "game") return;
+      e.preventDefault();
       switch (e.key) {
         case "ArrowUp": chat.y -= chat.speed; break;
         case "ArrowDown": chat.y += chat.speed; break;
@@ -124,6 +146,7 @@
     });
 
     canvas.addEventListener("touchmove", (e) => {
+      if (state !== "game") return;
       const touch = e.touches[0];
       const rect = canvas.getBoundingClientRect();
       chat.x = touch.clientX - rect.left - chat.width / 2;
@@ -131,7 +154,34 @@
       e.preventDefault();
     }, { passive: false });
 
-    gameLoop();
+    function startGame() {
+      resetGame();
+      startScreen.style.display = "none";
+      gameScreen.style.display = "block";
+      endScreen.style.display = "none";
+      state = "game";
+      requestAnimationFrame(gameLoop);
+    }
+
+    function showStart() {
+      state = "start";
+      startScreen.style.display = "block";
+      gameScreen.style.display = "none";
+      endScreen.style.display = "none";
+    }
+
+    function endGame(result) {
+      state = result;
+      endMessageEl.textContent = result === "victory" ? "Victoire !" : "Attrapé par Papa !";
+      startScreen.style.display = "none";
+      gameScreen.style.display = "none";
+      endScreen.style.display = "block";
+    }
+
+    startButton.addEventListener("click", startGame);
+    restartButton.addEventListener("click", showStart);
+
+    showStart();
   </script>
 </body>
 </html>
